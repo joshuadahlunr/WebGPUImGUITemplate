@@ -1,9 +1,13 @@
 #define WEBGPU_CPP_IMPLEMENTATION
 #include <glfw3webgpu.h>
-#include <webgpu/webgpu.hpp>
-#include "imgui.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_wgpu.h"
+#ifdef  __EMSCRIPTEN__
+	#include "thirdparty/WebGPU-distribution/include-emscripten/webgpu/webgpu.hpp"
+#else
+	#include <webgpu/webgpu.hpp>
+#endif
+#include <imgui.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_wgpu.h>
 
 #include <algorithm>
 #include <iostream>
@@ -22,8 +26,8 @@ wgpu::PresentMode getBestPresentMode(WGPUAdapter adapter, WGPUSurface surface) {
 		return wgpu::PresentMode::Mailbox;
 	else if(std::find(caps.presentModes, caps.presentModes + caps.presentModeCount, wgpu::PresentMode::Immediate) != caps.presentModes + caps.presentModeCount)
 		return wgpu::PresentMode::Immediate;
-	else if(std::find(caps.presentModes, caps.presentModes + caps.presentModeCount, wgpu::PresentMode::FifoRelaxed) != caps.presentModes + caps.presentModeCount)
-		return wgpu::PresentMode::FifoRelaxed;
+	// else if(std::find(caps.presentModes, caps.presentModes + caps.presentModeCount, wgpu::PresentMode::FifoRelaxed) != caps.presentModes + caps.presentModeCount)
+	// 	return wgpu::PresentMode::FifoRelaxed;
 	else return wgpu::PresentMode::Fifo;
 }
 
@@ -107,7 +111,11 @@ int main() {
 	auto window = glfwCreateWindow(800, 600, "WebGPU ImGUI Template", nullptr, nullptr);
 
 	// Setup WebGPU
+#ifndef __EMSCRIPTEN__
 	auto instance = wgpu::createInstance(wgpu::Default);
+#else
+	wgpu::Instance instance{}; *((size_t*)&instance) = 1; // Set the value of the instance to 1
+#endif
 	wgpu::Surface surface = glfwCreateWindowWGPUSurface(instance, window);
 	auto adapter = instance.requestAdapter(WGPURequestAdapterOptions{
 		.compatibleSurface = surface,
@@ -129,9 +137,10 @@ int main() {
 			.device = device,
 			.format = preferredFormat,
 			.usage = wgpu::TextureUsage::RenderAttachment,
-			.viewFormatCount = 1,
-			.viewFormats = &preferredFormat,
-			.alphaMode = WGPUCompositeAlphaMode_Opaque,
+			// .viewFormatCount = 1,
+			// .viewFormats = &preferredFormat,
+			.viewFormatCount = 0,
+			.alphaMode = wgpu::CompositeAlphaMode::Opaque,
 			.width = static_cast<uint32_t>(width),
 			.height = static_cast<uint32_t>(height),
 			.presentMode = presentMode
@@ -144,7 +153,11 @@ int main() {
 
 	// Main Loop
 	bool showDemoWindow = true;
+#ifdef __EMSCRIPTEN__
+	emscripten_set_main_loop(make_function_pointer([&]{
+#else
 	while(!glfwWindowShouldClose(window)) {
+#endif
 		// Poll GLFW Events
 		glfwPollEvents();
 
@@ -185,14 +198,20 @@ int main() {
 		queue.submit(commandBuffer);
 
 		// Update whats shown on the surface
+#ifndef __EMSCRIPTEN__
 		surface.present();
+#endif
 
 		// Release frame specific objects
 		commandBuffer.release();
 		renderPass.release();
 		encoder.release();
 		view.release();
+#ifdef __EMSCRIPTEN__
+	}), 0, true);
+#else
 	}
+#endif
 
 	// Cleanup ImGUI
 	ImGui_ImplWGPU_Shutdown();
