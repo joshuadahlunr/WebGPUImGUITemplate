@@ -1,11 +1,9 @@
 [submodule "thirdparty/glfw3webgpu"]
 	path = thirdparty/glfw3webgpu
 	url = https://github.com/eliemichel/glfw3webgpu
-	shallow = true
 [submodule "thirdparty/WebGPU-distribution"]
 	path = thirdparty/WebGPU-distribution
 	url = https://github.com/eliemichel/WebGPU-distribution
-	shallow = true
 [submodule "thirdparty/imgui"]
 	path = thirdparty/imgui
 	url = https://github.com/ocornut/imgui.git
